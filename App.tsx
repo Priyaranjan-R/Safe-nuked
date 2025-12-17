@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GameState, Player, CardOption, GameMode, ConnectionType, AVATARS } from './types';
-import { generateRoundContent, generateGameMasterCommentary } from './services/geminiService';
+import { generateRoundContent, generateGameMasterCommentary, isSystemConfigured } from './services/geminiService';
 import { Card } from './components/Card';
 import { PlayerList } from './components/PlayerList';
 import { GameMaster } from './components/GameMaster';
@@ -22,7 +22,8 @@ const App: React.FC = () => {
   const [gmLog, setGmLog] = useState("System initialized. Awaiting players.");
   const [gmThinking, setGmThinking] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TURN_TIME_LIMIT);
-  
+  const [isConfigured, setIsConfigured] = useState(true);
+
   // Settings
   const [customTopic, setCustomTopic] = useState('');
   const [isManualTraps, setIsManualTraps] = useState(false);
@@ -38,6 +39,15 @@ const App: React.FC = () => {
   const [roomCode, setRoomCode] = useState('');
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [onlineLobbyState, setOnlineLobbyState] = useState<'MENU' | 'CREATE' | 'JOIN'>('MENU');
+
+  useEffect(() => {
+    // Check if API Key is present on mount
+    const configured = isSystemConfigured();
+    setIsConfigured(configured);
+    if (!configured) {
+        setGmLog("CRITICAL ERROR: API KEY MISSING. CHECK HOSTING CONFIGURATION.");
+    }
+  }, []);
 
   // -- AI Turn Logic --
   useEffect(() => {
@@ -463,6 +473,16 @@ const App: React.FC = () => {
           SAFE / NUKED
         </h1>
         <p className="text-gray-400 mb-8 font-mono">A PARTY BLUFF GAME</p>
+        
+        {/* API KEY WARNING BANNER */}
+        {!isConfigured && (
+            <div className="w-full max-w-md bg-red-900/50 border border-red-500 p-4 mb-4 rounded text-center animate-pulse">
+                <h3 className="font-bold text-red-100 mb-1">⚠️ SYSTEM ERROR: MISSING API KEY</h3>
+                <p className="text-xs text-red-200">
+                    Netlify Hosting: Go to <strong>Site configuration &gt; Environment variables</strong> and add <code>API_KEY</code>.
+                </p>
+            </div>
+        )}
 
         <div className="w-full max-w-md bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl overflow-y-auto max-h-[85vh] relative">
           
@@ -635,8 +655,8 @@ const App: React.FC = () => {
           {showLaunchButton && (
             <button 
               onClick={initGameSequence}
-              disabled={players.length < 1 || (mode === 'CUSTOM' && !customTopic && !isManualEntry)}
-              className={`w-full py-4 rounded-lg font-display text-xl tracking-widest transition-all ${players.length < 1 ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(220,38,38,0.5)]'}`}
+              disabled={!isConfigured || players.length < 1 || (mode === 'CUSTOM' && !customTopic && !isManualEntry)}
+              className={`w-full py-4 rounded-lg font-display text-xl tracking-widest transition-all ${(!isConfigured || players.length < 1) ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_rgba(220,38,38,0.5)]'}`}
             >
               {connection === 'ONLINE' ? 'LAUNCH SERVER' : 'INITIATE SEQUENCE'}
             </button>

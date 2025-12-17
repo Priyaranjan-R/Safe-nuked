@@ -1,15 +1,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { GameMode } from "../types";
 
-// Initialize Gemini
-// NOTE: Process.env.API_KEY is injected by the environment.
+// -- CONFIGURATION CHECK --
+// The API Key is injected by Vite at build time via process.env.API_KEY
 const apiKey = process.env.API_KEY;
 
-if (!apiKey) {
-  console.error("CRITICAL ERROR: API_KEY is missing. Please add it to your Netlify Environment Variables.");
-}
+// Helper to check if the app is ready
+export const isSystemConfigured = (): boolean => {
+  return !!apiKey && apiKey !== '' && apiKey !== 'undefined';
+};
 
-// Initialize with the key, or a placeholder to prevent immediate crash (will fail on generation)
+// Initialize Gemini Client
+// This runs in the browser. 
+// If the key is missing, we create a dummy client that will fail gracefully later.
 const ai = new GoogleGenAI({ apiKey: apiKey || "MISSING_KEY" });
 
 const SYSTEM_INSTRUCTION_GM = `
@@ -19,11 +22,12 @@ Keep comments short (under 20 words). Mock players when they die. Be vaguely enc
 `;
 
 export const generateRoundContent = async (mode: GameMode, roundNumber: number, customTopic?: string, targetCount: number = 12): Promise<{ category: string; items: string[] }> => {
-  const modelId = "gemini-2.5-flash"; // Fast model for gameplay
+  const modelId = "gemini-2.5-flash"; 
   
-  if (!apiKey) {
+  if (!isSystemConfigured()) {
+    console.error("Gemini API Key is missing. Check your Netlify Environment Variables.");
     return {
-      category: "CONFIGURATION ERROR",
+      category: "SYSTEM ERROR",
       items: Array(targetCount).fill("MISSING API KEY")
     };
   }
@@ -85,8 +89,8 @@ export const generateRoundContent = async (mode: GameMode, roundNumber: number, 
     console.error("Gemini Generation Error:", error);
     // Fallback for offline/error
     return {
-      category: "Emergency Backup Protocol",
-      items: Array(targetCount).fill("Error 404").map((s, i) => `${s}-${i}`)
+      category: "OFFLINE MODE",
+      items: Array(targetCount).fill("Error / Offline").map((s, i) => `${s} ${i}`)
     };
   }
 };
@@ -98,7 +102,7 @@ export const generateGameMasterCommentary = async (
 ): Promise<string> => {
   const modelId = "gemini-2.5-flash";
 
-  if (!apiKey) return "Error: Logic Core Offline (Missing API Key)";
+  if (!isSystemConfigured()) return "Error: Logic Core Offline (Missing API Key)";
 
   let prompt = "";
   switch (event) {
