@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameState, Player, CardOption, GameMode, ConnectionType, AVATARS } from './types';
 import { generateRoundContent, generateGameMasterCommentary } from './services/geminiService';
 import { Card } from './components/Card';
@@ -6,7 +6,6 @@ import { PlayerList } from './components/PlayerList';
 import { GameMaster } from './components/GameMaster';
 import { OnlineLobby } from './components/OnlineLobby';
 import { AvatarSelector } from './components/AvatarSelector';
-import { Auth } from './components/Auth';
 
 const TURN_TIME_LIMIT = 10; // Seconds for Timed Mode
 
@@ -24,10 +23,6 @@ const App: React.FC = () => {
   const [gmThinking, setGmThinking] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TURN_TIME_LIMIT);
   
-  // Auth State
-  const [showAuth, setShowAuth] = useState(false);
-  const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
-
   // Settings
   const [customTopic, setCustomTopic] = useState('');
   const [isManualTraps, setIsManualTraps] = useState(false);
@@ -43,21 +38,6 @@ const App: React.FC = () => {
   const [roomCode, setRoomCode] = useState('');
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [onlineLobbyState, setOnlineLobbyState] = useState<'MENU' | 'CREATE' | 'JOIN'>('MENU');
-
-  // Handle Login
-  const handleLogin = (username: string) => {
-    setLoggedInUser(username);
-    setNewPlayerName(username); // Pre-fill the player name input
-    setShowAuth(false);
-    setGmLog(`User authenticated: ${username}. Welcome back.`);
-  };
-
-  // If user logs out (optional, for dev testing mostly)
-  const handleLogout = () => {
-    setLoggedInUser(null);
-    setNewPlayerName('');
-    setGmLog("User disconnected.");
-  };
 
   // -- AI Turn Logic --
   useEffect(() => {
@@ -166,11 +146,7 @@ const App: React.FC = () => {
       isHost: players.length === 0
     };
     setPlayers([...players, newPlayer]);
-    
-    // Only clear if not logged in user (so logged in user doesn't have to retype)
-    if (!loggedInUser || newPlayerName !== loggedInUser) {
-        setNewPlayerName('');
-    }
+    setNewPlayerName('');
     
     const nextIndex = (AVATARS.indexOf(selectedAvatar) + 1) % AVATARS.length;
     setSelectedAvatar(AVATARS[nextIndex]);
@@ -486,34 +462,10 @@ const App: React.FC = () => {
         <h1 className="text-5xl md:text-7xl font-display text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-600 mb-2 tracking-tighter">
           SAFE / NUKED
         </h1>
-        <p className="text-gray-400 mb-8 font-mono">A PARTY BLUFF GAME POWERED BY AI</p>
+        <p className="text-gray-400 mb-8 font-mono">A PARTY BLUFF GAME</p>
 
         <div className="w-full max-w-md bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl overflow-y-auto max-h-[85vh] relative">
           
-          {/* Auth Section */}
-          <div className="flex justify-end gap-3 mb-4 px-1 border-b border-gray-700 pb-2">
-             {loggedInUser ? (
-                <div className="flex items-center gap-2">
-                   <span className="text-xs text-green-400 font-mono">Logged in as {loggedInUser}</span>
-                   <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-white font-bold">[LOGOUT]</button>
-                </div>
-             ) : (
-               <button 
-                 onClick={() => setShowAuth(true)}
-                 className="text-xs text-red-500 hover:text-red-400 font-bold transition-colors animate-pulse"
-               >
-                 [ SYSTEM LOGIN / REGISTER ]
-               </button>
-             )}
-          </div>
-
-          {/* Render Auth Modal Over content */}
-          {showAuth && (
-            <div className="mb-6">
-               <Auth onLogin={handleLogin} onCancel={() => setShowAuth(false)} />
-            </div>
-          )}
-
           {/* Connection Toggle */}
           <div className="flex bg-gray-900 rounded p-1 mb-6 border border-gray-700">
              <button 
@@ -566,7 +518,7 @@ const App: React.FC = () => {
                   value={newPlayerName}
                   onChange={(e) => setNewPlayerName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addLocalPlayer()}
-                  className={`flex-1 bg-gray-900 border ${loggedInUser && newPlayerName === loggedInUser ? 'border-green-500 text-green-400' : 'border-gray-600'} rounded px-4 py-2 text-white focus:border-red-500 outline-none`}
+                  className={`flex-1 bg-gray-900 border border-gray-600 rounded px-4 py-2 text-white focus:border-red-500 outline-none`}
                   placeholder="Enter Name"
                   maxLength={10}
                 />

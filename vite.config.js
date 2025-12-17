@@ -13,15 +13,5 @@ export default defineConfig(({ mode }) => {
       // This prevents the "ReferenceError: process is not defined" in the browser
       'process.env.API_KEY': JSON.stringify(env.API_KEY || ''),
     },
-    server: {
-      proxy: {
-        // Redirect API calls to the backend server running on port 3000
-        '/api': {
-          target: 'http://localhost:3000',
-          changeOrigin: true,
-          secure: false,
-        },
-      },
-    },
   };
 });
