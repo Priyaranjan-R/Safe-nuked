@@ -3,7 +3,14 @@ import { GameMode } from "../types";
 
 // Initialize Gemini
 // NOTE: Process.env.API_KEY is injected by the environment.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = process.env.API_KEY;
+
+if (!apiKey) {
+  console.error("CRITICAL ERROR: API_KEY is missing. Please add it to your Netlify Environment Variables.");
+}
+
+// Initialize with the key, or a placeholder to prevent immediate crash (will fail on generation)
+const ai = new GoogleGenAI({ apiKey: apiKey || "MISSING_KEY" });
 
 const SYSTEM_INSTRUCTION_GM = `
 You are the "Game Master" of a high-stakes digital elimination game called "Safe / Nuked". 
@@ -14,6 +21,13 @@ Keep comments short (under 20 words). Mock players when they die. Be vaguely enc
 export const generateRoundContent = async (mode: GameMode, roundNumber: number, customTopic?: string, targetCount: number = 12): Promise<{ category: string; items: string[] }> => {
   const modelId = "gemini-2.5-flash"; // Fast model for gameplay
   
+  if (!apiKey) {
+    return {
+      category: "CONFIGURATION ERROR",
+      items: Array(targetCount).fill("MISSING API KEY")
+    };
+  }
+
   let prompt = "";
   if (mode === 'CUSTOM' && customTopic) {
     prompt = `Generate a list of ${targetCount} distinct, plausible items for the user-provided category: "${customTopic}". Make them fit the theme perfectly.`;
@@ -83,6 +97,8 @@ export const generateGameMasterCommentary = async (
   detail?: string
 ): Promise<string> => {
   const modelId = "gemini-2.5-flash";
+
+  if (!apiKey) return "Error: Logic Core Offline (Missing API Key)";
 
   let prompt = "";
   switch (event) {
